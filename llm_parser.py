@@ -4,28 +4,35 @@ import json
 import re
 from langchain_ollama import OllamaLLM
 from datetime import datetime
-DB_PATH = "./ads.db"
+DB_PATH = "./data/ads.db"
 TABLE_NAME = "Structured_Ad_calendar"
 
 # Setup local LLM using Ollama Mistral
 
 llm = OllamaLLM(model="mistral")
 
-def prompt_llm_for_row(row_dict):
-    print(f"\n **************************prompting LLM for row - { row_dict.get("Ad Id")}******************************* \n",)
+def prompt_llm_for_all_rows(df):
+    print(f"\n **************************prompting LLM for entire CSV******************************* \n",)
+    raw_json = df.to_dict(orient="records")
+    print(f"\n **************************raw_json = to_dict******************************* \n",)
+
+    # { row_dict.get("Ad Id")}
     prompt = f"""
-    You are an intelligent assistant for data correction and structuring. You will be given an ad row with missing or vague values.
+    You are an intelligent assistant for data correction and structuring. You will be given a list of ad rows from a CSV file with some values missing or vague values.
     Your task is to:
-    1. Fill any missing fields (e.g. end time, company name, placement on device) using natural language hints in other columns of the row (like "plays for 30 minutes" or "noon").
+    1. Fill each and every missing fields (e.g. end time, company name, placement on device) using natural language hints 
+    in other columns of the row (like "plays for 30 minutes" or "noon") and make it machine(LLM) understandable.
     2. Standardize time fields to format: YYYY-MM-DD HH:MM:SS
     3. Fix spelling or casing errors (e.g. rb can be mistakenly written as pb).
-    4. Always output strict valid JSON, using only double quotes, no markdown, no commentary.
-    Return a JSON with the following keys only:
+    4."rb_nrb" field should have only Rb or Nrb, no variations, correct accordingly which fields are not clear.
+    5. Always output strict valid **JSON array** of rows each row having these exact keys:
     ["ad_id", "company_name", "location", "start_time", "end_time", "description", "placement", "rb_nrb", "availability"]
-    Ad row:
-    {json.dumps(row_dict, ensure_ascii=False)}
+    Do not add explanations,do not add invalid escape characters, do not use any escape underscores(\_) also do not add any commentary only output with a pur JSON array.
+    {json.dumps(raw_json, ensure_ascii=False)}
     Respond only with the corrected JSON object.
     """
+    print(f"\n **************************invoking prompt******************************* \n",)
+
     return llm.invoke(prompt)
 
 def extract_json_from_response(response):
@@ -45,13 +52,18 @@ def extract_json_from_response(response):
         
 def normalize_time(tstr):
     try:
-        print("\n **************************normalizing time******************************* \n")
+        # print("\n **************************normalizing time******************************* \n")
         return datetime.strptime(tstr.strip(), "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d %H:%M:%S")
     except Exception:
         return tstr  # If already normalized or invalid, leave as it is
     
 def create_table_if_not_exists(conn):
     cursor = conn.cursor()
+    cursor.execute(f"""
+        DROP TABLE IF EXISTS Structured_Ad_calendar;
+    """)
+    conn.commit()
+    
     cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS Structured_Ad_calendar (
             ad_id TEXT PRIMARY KEY,
@@ -66,25 +78,26 @@ def create_table_if_not_exists(conn):
         )
     """)
     conn.commit()
-    print("\n **************************create table if not exist done******************************* \n")
+    print("\n **********************dropping table if exist, create table if not exist done******************************* \n")
     
-def process_csv_with_llm(csv_path):
+def process_csv_with_llm(df):
     print("\n **************************processing csv with LLM******************************* \n")
-    df = pd.read_csv(csv_path)
+    # df = pd.read_csv(csv_path)
     df = df.fillna(" ")
-    structured_rows = []
-    for _, row in df.iterrows():
-        row_dict = row.to_dict()
-        try:
-            llm_response = prompt_llm_for_row(row_dict)
-            corrected = extract_json_from_response(llm_response)
+    # structured_rows = []
+    try :
+        llm_response = prompt_llm_for_all_rows(df)
+        structured_list = extract_json_from_response(llm_response)
+
+        for corrected in structured_list:
             corrected["start_time"] = normalize_time(corrected.get("start_time", ""))
             corrected["end_time"] = normalize_time(corrected.get("end_time", ""))
-            structured_rows.append(corrected)
-        except Exception as e:
-            print(f"Failed to process row {row_dict.get('ad_id')}: {e}")
-            print(f"Raw LLM response: {llm_response}")
-    with sqlite3.connect(DB_PATH) as conn:
-        create_table_if_not_exists(conn)
-        pd.DataFrame(structured_rows).to_sql(TABLE_NAME, conn, if_exists="append", index=False,method="multi")
-        print("\n **************************dataframe to sql done******************************* \n")
+            # structured_rows.append(corrected)
+        
+        with sqlite3.connect(DB_PATH) as conn:
+            create_table_if_not_exists(conn)
+            pd.DataFrame(structured_list).to_sql(TABLE_NAME, conn, if_exists="replace", index=False)
+            print("\n **************************data written into sql ******************************* \n")
+    except Exception as e:
+            print(f"\nFailed to process full csv : {e}")
+            print(f"\nRaw LLM response: {llm_response}")
