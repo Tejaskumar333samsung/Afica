@@ -38,7 +38,7 @@ async def start():
             # print("entered y \n")
             # files = None
             # while files is None:
-            files = await cl.AskFileMessage(content="Please upload a csv file to begin!",timeout=100, accept=["text/csv",".csv"],raise_on_timeout=True).send()
+            files = await cl.AskFileMessage(content="Please upload a csv file to begin!",timeout=1000, accept=["text/csv",".csv"],raise_on_timeout=True).send()
             csv_file = files[0]
             df1 = pd.read_csv(csv_file.path)
             csv_data1 = df1.to_dict(orient='records')
@@ -46,15 +46,17 @@ async def start():
             print("\nprocessing uploaded calendar with llm\n")
             process_csv_with_llm(csv_data1)
             print("\n uploaded calendar processed \n")
-            # msg = None
-            # while msg is None:
+            
                 # print("entered y while msg is none \n")
             print("user info : x" ,cl.user_session)
-            msg1 = await cl.AskUserMessage(content="Any query from the uploaded ad calender?",timeout=500,raise_on_timeout=True).send()
-            print(msg1)
-            print("user info : y" ,cl.user_session)
-
-            print(f"{msg1['output']}\n")
+            msg1 = None
+            while True:
+                msg1 = await cl.AskUserMessage(content="Any query from the uploaded ad calender?",timeout= 10,raise_on_timeout=False).send()
+                print(f"{msg1}\n")
+                print("user info : y" ,cl.user_session)
+                if(msg1):
+                    break
+                # print(f"{msg1['output']}\n")
             # while msg is None:
             #     continue
             while ((msg1 is not None) and (str(msg1["output"]) != "bye")):
@@ -88,7 +90,7 @@ async def start():
             msg = None
             while msg is None:
                 # print("entered n while msg is none \n")
-                msg = await cl.AskUserMessage(content="Any query from the ad calender?",timeout=100).send()
+                msg = await cl.AskUserMessage(content="Any query from the ad calender?",timeout=1000).send()
                 if msg:
                     while msg is not None and str(msg["output"]) != "bye":
                         # print("entered while != bye loop in on message\n")
@@ -106,7 +108,7 @@ async def start():
                         print("\nresponse from llm invoked as message\n")
                         # print("response from llm parser function after n\n")
                         await cl.Message(content=f"{response}",  author="System").send()
-                        msg = await cl.AskUserMessage(content="Anything more? or say bye to end",timeout=100).send()    
+                        msg = await cl.AskUserMessage(content="Anything more? or say bye to end",timeout=1000).send()    
                     print("\nbye\n")
                     await cl.Message(content = "bye").send()
         
@@ -139,7 +141,7 @@ async def on_message(message: cl.Message):
         print("\nresponse from llm invoked as message\n")
         await cl.Message(content=f"{response}", author = "system").send()
 
-        msg = await cl.AskUserMessage(content="Anything more ? send bye to end",timeout=100000).send()
+        msg = await cl.AskUserMessage(content="Anything more ? send bye to end",timeout=1000).send()
         if msg:
             while msg is not None and str(msg["output"]) != "bye":
                 # print("entered while != bye loop in on message\n")
@@ -156,7 +158,7 @@ async def on_message(message: cl.Message):
                 print("\nresponse from llm invoked as message\n")
                 # print("response from llm parser function after n\n")
                 await cl.Message(content=f"{response}",  author="System").send()
-                msg = await cl.AskUserMessage(content="Anything more? or say bye to end",timeout=100000).send()
+                msg = await cl.AskUserMessage(content="Anything more? or say bye to end",timeout=1000).send()
             print("\nbye\n")
             await cl.Message(content = "bye").send()
 
