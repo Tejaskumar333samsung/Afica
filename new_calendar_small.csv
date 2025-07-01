@@ -1,0 +1,6 @@
+Ad Id,Company Name,Location,Start Time,End Time,Description,Placement on Device,Rb/NRb,Availability
+AD100,"Havemore",New York,10:00 AM,11:00 AM,"The ad shall play for an hour",Top,NRb,Available
+AD101,"Arun",Hyderabad, , 2025:06:21 12:00 pm,"Arun ad shall play for 2 hours",Bottom,Rb,Available"
+AD102,"KFC",,2025:06:21 11:00 am , 2025:06:21 12:00 pm,"KFC ad shall play for 1 hour in Bengaluru",Top,NRb,Available
+AD103,"MCD",Mumbai,2025:06:21 13:00:00,2025:06:21 14:00:00,"MCD ad shall play for 1 hour",Bottom,Rb,Available
+AD104,"Pizza Hut",Kolkata,,,"Pizza Hut ad shall play for 1 hour from 2 pm",Top,NRb,Available

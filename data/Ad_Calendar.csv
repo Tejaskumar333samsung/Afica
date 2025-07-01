@@ -1,6 +1,6 @@
 Ad Id,Company Name,Location,Start Time,End Time,Description,Placement on Device,Rb/NRb,Availability
-AD101,Cocacola,Kolkata,2025-06-19 12:00:00,,"Starts from noon, duration: 1hr",Bottom,Rb,Yes
+AD101,Cocacola,Kolkata,2025-06-20 12:00:00,,"Starts from noon, duration: 1hr",Bottom,Rb,Yes
 AD102,HUL,Delhi,,,"Ad for HUL starts at 2pm and plays for 2 hours",Side Bar,NRb,Yes
-AD103,Colgate,Delhi,2025-06-19 18:00:00,2025-06-19 19:00:00,Colgate dental ad,Top,Rb,Yes
-AD104,Unilevr,Mumbai,2025-06-20 08:00:00,,"Unilevr early morning spot, 1 hr",Full Screen,Rb,Yes
+AD103,Colgate,Delhi,2025-06-21 19:00:00,2025-06-21 20:00:00,Colgate dental ad,Top,Rb,Yes
+AD104,Unilevr,Mumbai,2025-06-22 08:00:00,,"Unilevr early morning spot, 1 hr",Full Screen,Rb,Yes
 AD105,Pantene,,2025-06-20 20:00:00,2025-06-20 21:30:00,"Pantene Hairfall ad from Bengaluru",Center,Rb,Yes

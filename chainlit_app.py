@@ -14,19 +14,6 @@ import pandas as pd
 df = pd.read_csv("./data/Ad_Calendar.csv")
 csv_data = df.to_dict(orient='records')
 csv_content = json.dumps(csv_data, ensure_ascii=False)
-# loader = CSVLoader(file_path="./data/Ad_Calendar.csv")
-# # csv_path = "./data/Ad_Calendar.csv"
-# # process_csv_with_llm(csv_path)
-# # docs = loader.load()
-
-# # loader = DataFrameLoader(df)
-# docs = loader.load()
-
-# # Proceed with vector DB setup for Q&A
-# embeddings = OllamaEmbeddings(model ="mistral")  #deepseek-r1:7b
-# vectordb = Chroma.from_documents(docs,embedding = embeddings)
-# retriever = vectordb.as_retriever()
-
 llm = OllamaLLM(model ="mistral")
 
 async def update_rb_panel():
@@ -44,134 +31,88 @@ async def update_rb_panel():
 
 @cl.on_chat_start
 async def start():
-
-    res = await cl.AskUserMessage(content="do you want to upload a new csv file ?(y/n)", timeout=50).send()
-    # print(res)
-    # print(type(res))  # dictionary
-    # print(res["output"])
-    # print(type(res["output"]))
-    # print(str(res)[4]) 
+    res = await cl.AskUserMessage(content="do you want to upload a new csv file ?(y/n)", timeout=10).send()
     if res :
-        print("got y/n res\n")
+        # print("got y/n res\n")
         if str(res["output"]) == "y":
-            print("entered y \n")
-            # await cl.Message(
-            #     content=f"Your name is: {res['output']}",
-            # ).send()
-            files = None
-            while files is None:
-                files = await cl.AskFileMessage(content="Please upload a csv file to begin!", accept=["csv"]).send()
-                csv_file = files[0]
+            # print("entered y \n")
+            # files = None
+            # while files is None:
+            files = await cl.AskFileMessage(content="Please upload a csv file to begin!",timeout=100, accept=["text/csv",".csv"],raise_on_timeout=True).send()
+            csv_file = files[0]
             df1 = pd.read_csv(csv_file.path)
             csv_data1 = df1.to_dict(orient='records')
             csv_content1 = json.dumps(csv_data1, ensure_ascii=False)
-            print("processing uploaded calendar with llm\n")
-            process_csv_with_llm(df1)
-
-            msg = None
-            while msg is None:
+            print("\nprocessing uploaded calendar with llm\n")
+            process_csv_with_llm(csv_data1)
+            print("\n uploaded calendar processed \n")
+            # msg = None
+            # while msg is None:
                 # print("entered y while msg is none \n")
-                msg = await cl.AskUserMessage(content="Any query from the uploaded ad calender?",timeout=100000).send()
-                if msg:
-                    while msg is not None and str(msg["output"]) != "bye":
-                        if msg:
-                            # print("entered while != bye loop in on message\n")
-                            print(f"user : {msg['output']}\n")
+            print("user info : x" ,cl.user_session)
+            msg1 = await cl.AskUserMessage(content="Any query from the uploaded ad calender?",timeout=500,raise_on_timeout=True).send()
+            print(msg1)
+            print("user info : y" ,cl.user_session)
 
-                            #{csv_content},
-                            prompt = f"""
-                            You are ad calendar manager, with calendar data : {csv_content1},    
-                            User asked: "{msg['output']}"
-                            Please provide an answer in based on that given data.
-                            """
-                            response = llm.invoke(prompt)
-                            print("response from llm invoke function in on message\n")
-                            # print("response from llm parser function after n\n")
-                            await cl.Message(content=f"AFICA: {response}", author="System").send()
-                            msg = await cl.AskUserMessage(content="Anything more? or say bye to end",timeout=100000).send()
+            print(f"{msg1['output']}\n")
+            # while msg is None:
+            #     continue
+            while ((msg1 is not None) and (str(msg1["output"]) != "bye")):
+                print("entered while != bye loop in on message\n")
+                current_date_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                print(f"user : {msg1['output']}\n")
 
-                    await cl.Message(content = "bye").send()
-                # if msg:
-                #     prompt = f"""
-                #     You are ad calendar manager, with calendar data: {csv_content1},
-                #     client asked: "{msg['output']}"
-                #     Please provide an answer based on this data.
-                #     """
-                #     response = llm.invoke(prompt)
-                #     await cl.Message(content=response).send()
-            # print("exited y while msg is none \n")
-            # loader = DataFrameLoader(df)
-            # loader = CSVLoader(file_path=csv_file.path)
-            # docs = loader.load()
-            # # Proceed with vector DB setup for Q&A
-            # # embeddings = OllamaEmbeddings(model ="mistral")  #deepseek-r1:7b
-            # vectordb1 = Chroma.from_documents(docs,embedding = embeddings)
-            # retriever1 = vectordb1.as_retriever()
-            # # llm = OllamaLLM(model ="mistral")
-            
-            # qa_chain = retrieval_qa.from_chain_type(llm =llm, retriever =retriever1)
-            
-            # cl.user_session.set("qa_chain",qa_chain)
-            # Now display the next ending Rb ad immediately
-            # await show_rb_panel(True)
+                #{csv_content},
+                prompt = f"""
+                You are a friendly ad calendar manager, with calendar data : {csv_content1},    
+                User asked: "{msg1['output']}"
+                Please provide precise answer in concise way based on that given data, also know that current date,time is {current_date_time}.
+                """
+                response = llm.invoke(prompt)
+                print(f"\n AFICA: {response}\n")
+                print("\nresponse from llm invoke function in on message\n")
+                # print("response from llm parser function after n\n")
+                await cl.Message(content=f"{response}", author="System").send()
+                msg1 = await cl.AskUserMessage(content="Anything more? or say bye to end").send()
+                # while msg is None:
+                #     continue                    
+            print("\nbye\n")
+            await cl.Message(content = "bye").send()
 
         elif str(res["output"]) == "n":
-            print("entered n\n")
+            # print("entered n\n")
             if is_ad_table_empty():
-                await cl.Message(
-                    content="ℹ️ Ad table is missing or empty—parsing CSV and populating database…",
-                    author="System",
-                    # disable_feedback=True,
-                ).send()
-                print("table is empy, processing local csv with llm\n")
-                process_csv_with_llm(df)
-
+                await cl.Message(content="Ad table is missing or empty, parsing CSV and populating database…",author="System").send()
+                print("\ntable is empty, processing local csv with llm\n")
+                process_csv_with_llm(csv_data)
             msg = None
             while msg is None:
                 # print("entered n while msg is none \n")
-                msg = await cl.AskUserMessage(content="Any query from the ad calender?",timeout=100000).send()
+                msg = await cl.AskUserMessage(content="Any query from the ad calender?",timeout=100).send()
                 if msg:
                     while msg is not None and str(msg["output"]) != "bye":
                         # print("entered while != bye loop in on message\n")
-                        print(f"user : {msg['output']}\n")
+                        print(f"\nuser : {msg['output']}\n")
+                        current_date_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         #{csv_content},
                         prompt = f"""
-                        You are ad calendar manager, with calendar data : {csv_content},    
+                        You are a friendly ad calendar manager, with calendar data : {csv_content},    
                         User asked: "{msg['output']}"
-                        Please provide an answer in based on that given data.
+                        Please provide precise answer in concise way based on that given data, also know current date,time is {current_date_time}.
                         """
                         response = llm.invoke(prompt)
-                        print(f"AFICA: {response}")
+                        print(f"\n AFICA: {response}\n")
                         # print(type(response))
-                        print("response from llm invoke function in on message\n")
+                        print("\nresponse from llm invoked as message\n")
                         # print("response from llm parser function after n\n")
                         await cl.Message(content=f"{response}",  author="System").send()
-                        msg = await cl.AskUserMessage(content="Anything more? or say bye to end",timeout=100000).send()
-                        
-
+                        msg = await cl.AskUserMessage(content="Anything more? or say bye to end",timeout=100).send()    
+                    print("\nbye\n")
                     await cl.Message(content = "bye").send()
-
-
-                # if msg:
-                #     prompt = f"""
-                #     You are ad calendar manager, with calendar data: {csv_content},
-                #     client asked: "{msg['output']}"
-                #     Please provide an answer based on this data.
-                #     """
-                #     response = llm.invoke(prompt)
-                #     print(response)
-                #     print("response from llm parser function after n\n")
-                #     await cl.Message(content=response).send()
-            # print("exited n while msg is none \n")
-            # qa_chain = retrieval_qa.from_chain_type(llm =llm, retriever =retriever)
-            # cl.user_session.set("qa_chain",qa_chain)
-
-            
-            # Now display the next ending Rb ad immediately
-            # await show_rb_panel(True)
         
         else:
-            await cl.Message( content="Invalid input. Please respond with 'y' or 'n'.", author="System").send()
+            print("\n invalid input at y/n \n")
+            await cl.Message( content=f"Invalid input. Please respond with 'y' or 'n'.", author="System").send()
 
         # cl.run_background_tasks(update_rb_panel)
 
@@ -184,33 +125,39 @@ async def start():
 async def on_message(message: cl.Message):
     # qa_chain = cl.user_session.get("qa_chain")
     if message.content not in ("y", "n","bye"):
-        print("entered on normal message\n")
+        print("\n normal message\n")
+        print(f"\nuser : {message.content}\n")
+        current_date_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         #: {csv_content}
         prompt = f"""
-        You are ad calendar manager, with calendar data : {csv_content},
+        You are friendly ad calendar manager, with calendar data : {csv_content},
         User asked: "{message.content}"
-        Please provide an answer in based on that given data.
+        Please provide precise answer in concise way based on that given data, also know that current date,time is {current_date_time}.
         """
         response = llm.invoke(prompt)
-        print("response from llm invoke function in on message\n")
-        await cl.Message(content=f"AFICA: {response}", author = "system").send()
+        print(f"\n AFICA: {response}\n")
+        print("\nresponse from llm invoked as message\n")
+        await cl.Message(content=f"{response}", author = "system").send()
 
         msg = await cl.AskUserMessage(content="Anything more ? send bye to end",timeout=100000).send()
         if msg:
             while msg is not None and str(msg["output"]) != "bye":
-                print("entered while != bye loop in on message\n")
+                # print("entered while != bye loop in on message\n")
+                print(f"\nuser : {msg['output']}\n")
+                current_date_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 #{csv_content},
                 prompt = f"""
-                You are ad calendar manager, with calendar data : {csv_content},    
+                You are a friendly ad calendar manager, with calendar data : {csv_content},    
                 User asked: "{msg['output']}"
-                Please provide an answer in based on that given data.
+                Please provide precise answer in concise way based on that given data, also know that current date,time is {current_date_time}.
                 """
                 response = llm.invoke(prompt)
-                print("response from llm invoke function in on message\n")
+                print(f"\n AFICA: {response}\n")
+                print("\nresponse from llm invoked as message\n")
                 # print("response from llm parser function after n\n")
                 await cl.Message(content=f"{response}",  author="System").send()
                 msg = await cl.AskUserMessage(content="Anything more? or say bye to end",timeout=100000).send()
-
+            print("\nbye\n")
             await cl.Message(content = "bye").send()
 
 
